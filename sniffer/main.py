@@ -3,6 +3,7 @@
 import socket
 
 import os
+import platform
 import sys
 import getopt
 import struct
@@ -10,6 +11,7 @@ from ctypes import *
 import fcntl
 
 ## SETTINGS
+system = platform.system().lower()
 host = "127.0.0.1"
 
 # Netlink for setting promiscuous mode on unix/linux
@@ -63,7 +65,7 @@ class IPv4(Structure):
 
 
 def main(args):
-    global host
+    global host, syste
     
     # Set correct socket type depending on OS
     if os.name == "nt":
@@ -80,15 +82,20 @@ def main(args):
         # If on windows, set promiscuous mode through exposed api
         if os.name == "nt":
             sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
-        #else:
-            # Set promiscuous on other (unix/linux/etc.)
-            #s = socket.socket(socket.AF_NETLINK, socket.SOCK_DGRAM)
-            #ifr = ifreq()
-            #ifr.ifrn = "eth4"
-            #fcntl.ioctl(sniffer.fileno(), SIOCGIFFLAGS, ifr) # G for get
-            #ifr.ifr_flags |= IFF_PROMISC
-            #fcntl.ioctl(sniffer.fileno(), SIOCSIFFLAGS, ifr) # S for set
-            
+        else:
+            if system == "linux":
+                # Disable promiscuous on other (unix/linux/etc.)
+                s = socket.socket(socket.AF_NETLINK, socket.SOCK_DGRAM)
+                s.close()
+                #ifr = ifreq()
+                #ifr.ifrn = "en0"
+                #fcntl.ioctl(sniffer.fileno(), SIOCGIFFLAGS, ifr) # G for get
+                #ifr.ifr_flags &= ~IFF_PROMISC
+                #fcntl.ioctl(sniffer.fileno(), SIOCSIFFLAGS, ifr) # S for set
+
+            elif system == "darwin":
+                print "TODO: Promiscuous mode in OSX"
+
         try:
             lines = 0
             while True:
@@ -124,15 +131,20 @@ def main(args):
             # If on windows, disable promiscuous mode
             if os.name == "nt":
                 sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)
-            #else:
-                # Disable promiscuous on other (unix/linux/etc.)
-                #s = socket.socket(socket.AF_NETLINK, socket.SOCK_DGRAM)
-                #ifr = ifreq()
-                #ifr.ifrn = "en0"
-                #fcntl.ioctl(sniffer.fileno(), SIOCGIFFLAGS, ifr) # G for get
-                #ifr.ifr_flags &= ~IFF_PROMISC
-                #fcntl.ioctl(sniffer.fileno(), SIOCSIFFLAGS, ifr) # S for set
-            
+            else:
+                if system == "linux":
+                    # Disable promiscuous on other (unix/linux/etc.)
+                    s = socket.socket(socket.AF_NETLINK, socket.SOCK_DGRAM)
+                    s.close()
+                    #ifr = ifreq()
+                    #ifr.ifrn = "en0"
+                    #fcntl.ioctl(sniffer.fileno(), SIOCGIFFLAGS, ifr) # G for get
+                    #ifr.ifr_flags &= ~IFF_PROMISC
+                    #fcntl.ioctl(sniffer.fileno(), SIOCSIFFLAGS, ifr) # S for set
+
+                elif system == "darwin":
+                    print "TODO: Promiscuous mode in OSX"
+
             print ""
             print "stopping..."
 
@@ -165,6 +177,7 @@ def printHelp(filename, status):
     
 if __name__ == "__main__":
     print "OS: " + os.name
+    print "Platform: " + platform.system()
     args = sys.argv[0:]
     parseOpts(args)
     main(args)

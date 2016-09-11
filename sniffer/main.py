@@ -12,23 +12,23 @@ host = "192.168.0.104"
 
 # IP Header
 class IPv4(Structure):
-    _fields = [
-        #("name", datatype, count),
-        #("", c_, ),
-        ("version", c_ubyte, 4),
-        ("ihl", c_ubyte, 4),
-        #("dscp", c_ubyte, 6),
-        #("ecn", c_ubyte, 2),
-        ("tos", c_ubyte),
-        ("len", c_ushort),
-        ("id", c_ushort),
-        #("flags", c_ubyte, 3),
-        ("offset", c_ushort),
-        ("ttl", c_ubyte),
+    _fields_ = [
+        #("name",        datatype, count),
+        #("",            c_, ),
+        ("version",      c_ubyte, 4),
+        ("ihl",          c_ubyte, 4),
+        ("dscp",         c_ubyte, 6),
+        ("ecn",          c_ubyte, 2),
+        #("tos",          c_ubyte),
+        ("len",          c_ushort),
+        ("id",           c_ushort),
+        ("flags",        c_ubyte, 3),
+        ("offset",       c_ushort, 13),
+        ("ttl",          c_ubyte),
         ("protocol_num", c_ubyte),
-        ("chksum", c_ushort),
-        ("src", c_ulong),
-        ("dst", c_ulong)
+        ("chksum",       c_ushort),
+        ("src",          c_uint32),
+        ("dst",          c_uint32)
     ]
 
     def __new__(self, socket_buffer = None):
@@ -67,15 +67,34 @@ if os.name == "nt":
     sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
 
 try:
+    lines = 0
     while True:
         # Read packet
         raw_buffer = sniffer.recvfrom(65565)[0]
-
+        
         # Create IP header from first 20 bytes
-        ip_header = IP(raw_buffer[0:20])
+        ip_header = IPv4(raw_buffer[0:20])
 
+        #print header
+        if(lines % 10 == 0):
+            print ""
+            print "#\tProtocol\tfrom IP\t\tto IP\t\tversion\tlength\tttl\tchksum\tflags"
+            print "----------------------------------------------------------------------------------"
+            
         # Print stuff
-        print "Protocol: %s %s -> %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address)
+        print ("%d\t%s\t\t%s -> %s\t%d\t%d\t%d\t%d\t%s" %
+               (lines,
+                ip_header.protocol,
+                ip_header.src_address,
+                ip_header.dst_address,
+                ip_header.version,
+                ip_header.len,
+                ip_header.ttl,
+                ip_header.chksum,
+                "{0:b}".format(ip_header.flags)))
+
+        # Count up lines
+        lines += 1
 
 # Handle CTRL+C
 except KeyboardInterrupt:
